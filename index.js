@@ -10,6 +10,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors())
 
+
+const login = (request, response, next) => {
+    const {usuario, senha} = request.body
+
+    pool.query('SELECT * FROM usuarios where nomeusuario = $1 and senha = $2', 
+    [usuario, senha], (err, results) =>{
+        if(err || results.rowCounts == 0){
+            return response.status(401).json({auth: false , message: 'Usuário ou senha inválido'});
+        }
+
+        const nome_usuario = results.rows[0].usuario;
+        const token = jwt.sign( { nome_usuario }, process.env.SECRET, {
+            expiresIn: 300
+        })
+        return response.json({auth: true , token: token});
+    })
+}
+
 const getCigarros = (request, response) => {
     pool.query('SELECT * FROM cigarros', (error, results) => {
         if (error) {
@@ -80,6 +98,11 @@ const getCigarroPorID = (request, response) => {
             response.status(200).json(results.rows)
         })
 }
+
+
+    app
+        .route("/login")
+        .post(login)
 
     app
         .route('/cigarros')
